@@ -102,24 +102,26 @@ export default function DocumentDetail({ document, onBack, onProcess, onReview }
 
         {/* OCR Data */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3">OCR Extracted Data</h3>
+          <h3 className="text-lg font-semibold mb-3 text-gray-900">OCR Extracted Data</h3>
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600">Company Name</p>
-                <p className="font-medium">{document.ocr_data.company_name || '-'}</p>
+                <p className="text-sm text-gray-600 mb-1">Company Name</p>
+                <p className="font-medium text-gray-900">{document.ocr_data.company_name || <span className="text-gray-500">-</span>}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Company Number</p>
-                <p className="font-medium">{document.ocr_data.company_number || '-'}</p>
+                <p className="text-sm text-gray-600 mb-1">Company Number</p>
+                <p className="font-medium text-gray-900">{document.ocr_data.company_number || <span className="text-gray-500">-</span>}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Address</p>
-                <p className="font-medium">{document.ocr_data.address || '-'}</p>
+                <p className="text-sm text-gray-600 mb-1">Address</p>
+                <p className="font-medium text-gray-900">{document.ocr_data.address || <span className="text-gray-500">-</span>}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Confidence</p>
-                <p className="font-medium">{document.ocr_data.confidence?.toFixed(1) || '-'}%</p>
+                <p className="text-sm text-gray-600 mb-1">Confidence</p>
+                <p className="font-medium text-gray-900">
+                  {document.ocr_data.confidence ? `${document.ocr_data.confidence.toFixed(1)}%` : <span className="text-gray-500">-</span>}
+                </p>
               </div>
             </div>
           </div>
@@ -127,20 +129,20 @@ export default function DocumentDetail({ document, onBack, onProcess, onReview }
 
         {/* Companies House Data */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3">Companies House Data</h3>
+          <h3 className="text-lg font-semibold mb-3 text-gray-900">Companies House Data</h3>
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600">Company Name</p>
-                <p className="font-medium">{document.companies_house_data.company_name || '-'}</p>
+                <p className="text-sm text-gray-600 mb-1">Company Name</p>
+                <p className="font-medium text-gray-900">{document.companies_house_data.company_name || <span className="text-gray-500">-</span>}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Company Number</p>
-                <p className="font-medium">{document.companies_house_data.company_number || '-'}</p>
+                <p className="text-sm text-gray-600 mb-1">Company Number</p>
+                <p className="font-medium text-gray-900">{document.companies_house_data.company_number || <span className="text-gray-500">-</span>}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Address</p>
-                <p className="font-medium">{document.companies_house_data.address || '-'}</p>
+                <p className="text-sm text-gray-600 mb-1">Address</p>
+                <p className="font-medium text-gray-900">{document.companies_house_data.address || <span className="text-gray-500">-</span>}</p>
               </div>
             </div>
           </div>
@@ -148,32 +150,44 @@ export default function DocumentDetail({ document, onBack, onProcess, onReview }
 
         {/* Forensic Analysis */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3">Forensic Analysis</h3>
+          <h3 className="text-lg font-semibold mb-3 text-gray-900">Forensic Analysis</h3>
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600">Forensic Score</p>
-                <p className="font-medium">{document.forensic_analysis.forensic_score?.toFixed(1) || '-'}</p>
+                <p className="text-sm text-gray-600 mb-1">Forensic Score</p>
+                <p className="font-medium text-gray-900">
+                  {document.forensic_analysis.forensic_score !== null && document.forensic_analysis.forensic_score !== undefined 
+                    ? document.forensic_analysis.forensic_score.toFixed(1) 
+                    : <span className="text-gray-500">-</span>}
+                </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">ELA Score</p>
-                <p className="font-medium">{document.forensic_analysis.ela_score?.toFixed(1) || '-'}</p>
+                <p className="text-sm text-gray-600 mb-1">ELA Score</p>
+                <p className="font-medium text-gray-900">
+                  {document.forensic_analysis.ela_score !== null && document.forensic_analysis.ela_score !== undefined 
+                    ? document.forensic_analysis.ela_score.toFixed(1) 
+                    : <span className="text-gray-500">-</span>}
+                </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">JPEG Quality</p>
-                <p className="font-medium">{document.forensic_analysis.jpeg_quality?.toFixed(1) || '-'}</p>
+                <p className="text-sm text-gray-600 mb-1">JPEG Quality</p>
+                <p className="font-medium text-gray-900">
+                  {document.forensic_analysis.jpeg_quality !== null && document.forensic_analysis.jpeg_quality !== undefined 
+                    ? document.forensic_analysis.jpeg_quality.toFixed(1) 
+                    : <span className="text-gray-500">-</span>}
+                </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Copy-Move Detected</p>
-                <p className="font-medium">{document.forensic_analysis.copy_move_detected ? 'Yes' : 'No'}</p>
+                <p className="text-sm text-gray-600 mb-1">Copy-Move Detected</p>
+                <p className="font-medium text-gray-900">{document.forensic_analysis.copy_move_detected ? 'Yes' : 'No'}</p>
               </div>
             </div>
             {document.forensic_analysis.details && document.forensic_analysis.details.length > 0 && (
               <div className="mt-4">
                 <p className="text-sm text-gray-600 mb-2">Details:</p>
-                <ul className="list-disc list-inside text-sm">
+                <ul className="list-disc list-inside text-sm text-gray-900">
                   {document.forensic_analysis.details.map((detail: string, idx: number) => (
-                    <li key={idx}>{detail}</li>
+                    <li key={idx} className="text-gray-900">{detail}</li>
                   ))}
                 </ul>
               </div>

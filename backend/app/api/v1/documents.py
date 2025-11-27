@@ -10,6 +10,7 @@ import uuid
 import shutil
 from pathlib import Path
 import io
+import logging
 
 from app.db.database import get_db
 from app.db.models import DocumentVerification
@@ -17,7 +18,21 @@ from app.core.config import settings
 from app.api.v1.verification import process_document_verification
 from app.services.s3_service import s3_service
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def truncate_string(value: str, max_length: int) -> str:
+    """
+    Truncate a string to fit within the specified max length.
+    Returns the truncated string with '...' appended if truncated.
+    """
+    if not value:
+        return value
+    if len(value) <= max_length:
+        return value
+    # Truncate and add ellipsis, but ensure total length doesn't exceed max_length
+    return value[:max_length - 3] + "..."
 
 
 @router.post("/upload")
@@ -54,13 +69,21 @@ async def upload_document(
     await file.seek(0)
     file_obj = io.BytesIO(file_content)
     
-    # Upload to S3 if enabled, otherwise save locally
-    s3_key = None
-    file_path = None
+    # Always save locally first (required for processing and satisfies NOT NULL constraint)
+    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    file_path = upload_dir / filename
+    await file.seek(0)
+    with open(file_path, "wb") as buffer:
+        buffer.write(file_content)
     
+    # Upload to S3 if enabled (as backup/archive)
+    s3_key = None
     if s3_service.is_enabled():
         # Upload to S3
         s3_key = f"documents/{document_id}/{filename}"
+        await file.seek(0)
+        file_obj.seek(0)
         s3_url = s3_service.upload_fileobj(
             file_obj,
             s3_key,
@@ -68,33 +91,25 @@ async def upload_document(
         )
         
         if not s3_url:
-            # Fallback to local storage if S3 upload fails
-            upload_dir = Path(settings.UPLOAD_DIR)
-            upload_dir.mkdir(parents=True, exist_ok=True)
-            file_path = upload_dir / filename
-            await file.seek(0)
-            with open(file_path, "wb") as buffer:
-                buffer.write(file_content)
-            s3_key = None  # Clear S3 key if upload failed
-    else:
-        # Save locally
-        upload_dir = Path(settings.UPLOAD_DIR)
-        upload_dir.mkdir(parents=True, exist_ok=True)
-        file_path = upload_dir / filename
-        await file.seek(0)
-        with open(file_path, "wb") as buffer:
-            buffer.write(file_content)
+            # S3 upload failed, but we still have local copy
+            # Clear s3_key to indicate S3 upload failed
+            s3_key = None
+    
+    # Truncate merchant data to fit database column limits
+    merchant_company_name = truncate_string(company_name, 500) if company_name else None
+    merchant_company_number = truncate_string(company_number, 50) if company_number else None
+    merchant_date = truncate_string(date, 50) if date else None
     
     # Create database record
     db_record = DocumentVerification(
         document_id=document_id,
         filename=file.filename,
-        file_path=str(file_path) if file_path else None,
+        file_path=str(file_path),
         s3_key=s3_key,
-        merchant_company_name=company_name,
-        merchant_company_number=company_number,
-        merchant_address=address,
-        merchant_date=date,
+        merchant_company_name=merchant_company_name,
+        merchant_company_number=merchant_company_number,
+        merchant_address=address,  # TEXT column, no truncation needed
+        merchant_date=merchant_date,
         status="pending"
     )
     
@@ -103,6 +118,8 @@ async def upload_document(
     db.refresh(db_record)
     
     # Auto-start processing in background
+    logger.info(f"[UPLOAD] Document uploaded successfully. document_id: {document_id}, filename: {file.filename}, file_path: {file_path}, s3_key: {s3_key}")
+    logger.info(f"[UPLOAD] Starting background processing task for document_id: {document_id}")
     background_tasks.add_task(process_document_verification, document_id)
     
     return {

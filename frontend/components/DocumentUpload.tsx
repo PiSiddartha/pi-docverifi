@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, File, X, CheckCircle, AlertCircle } from 'lucide-react'
-import { uploadDocument, processVerification } from '@/lib/api'
+import { uploadDocument } from '@/lib/api'
+import ProgressBar from './ProgressBar'
 
 export default function DocumentUpload() {
   const [file, setFile] = useState<File | null>(null)
@@ -14,6 +15,7 @@ export default function DocumentUpload() {
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string; documentId?: string } | null>(null)
   const [processing, setProcessing] = useState(false)
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null)
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
@@ -53,24 +55,13 @@ export default function DocumentUpload() {
         documentId: result.document_id
       })
 
-      // Auto-start processing
+      // Set document ID for progress tracking (processing starts automatically on upload)
       if (result.document_id) {
+        setCurrentDocumentId(result.document_id)
         setProcessing(true)
-        try {
-          await processVerification(result.document_id)
-        } catch (error: any) {
-          console.error('Error starting processing:', error)
-        } finally {
-          setProcessing(false)
-        }
       }
 
-      // Reset form
-      setFile(null)
-      setCompanyName('')
-      setCompanyNumber('')
-      setAddress('')
-      setDate('')
+      // Don't reset form yet - wait for processing to complete
     } catch (error: any) {
       setUploadResult({
         success: false,
@@ -199,7 +190,7 @@ export default function DocumentUpload() {
         </button>
 
         {/* Result Message */}
-        {uploadResult && (
+        {uploadResult && !processing && (
           <div
             className={`mt-4 p-4 rounded-lg flex items-center space-x-2 ${
               uploadResult.success
@@ -213,6 +204,48 @@ export default function DocumentUpload() {
               <AlertCircle className="w-5 h-5" />
             )}
             <span>{uploadResult.message}</span>
+          </div>
+        )}
+
+        {/* Progress Bar */}
+        {processing && currentDocumentId && (
+          <div className="mt-6">
+            <ProgressBar 
+              documentId={currentDocumentId}
+              onComplete={(status) => {
+                setProcessing(false)
+                // Reset form after processing completes
+                setFile(null)
+                setCompanyName('')
+                setCompanyNumber('')
+                setAddress('')
+                setDate('')
+                setCurrentDocumentId(null)
+                
+                // Update result message based on final status
+                if (status === 'passed') {
+                  setUploadResult({
+                    success: true,
+                    message: 'Document verification completed successfully!',
+                    documentId: currentDocumentId
+                  })
+                } else if (status === 'failed') {
+                  // "failed" can mean either low score (normal) or processing error
+                  // The progress message should contain details about the score
+                  setUploadResult({
+                    success: false,
+                    message: 'Document verification did not pass. Check document details for score breakdown.',
+                    documentId: currentDocumentId
+                  })
+                } else if (['review', 'manual_review'].includes(status)) {
+                  setUploadResult({
+                    success: true,
+                    message: 'Document requires manual review.',
+                    documentId: currentDocumentId
+                  })
+                }
+              }}
+            />
           </div>
         )}
       </div>

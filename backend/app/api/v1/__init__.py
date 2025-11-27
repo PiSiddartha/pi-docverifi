@@ -1,8 +1,9 @@
 from fastapi import APIRouter
-from app.api.v1 import documents, verification
+from app.api.v1 import documents, verification, progress
 
 router = APIRouter()
 
 router.include_router(documents.router, prefix="/documents", tags=["documents"])
 router.include_router(verification.router, prefix="/verification", tags=["verification"])
+router.include_router(progress.router, prefix="/progress", tags=["progress"])
 

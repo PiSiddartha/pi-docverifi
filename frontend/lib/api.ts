@@ -116,3 +116,17 @@ export const manualReview = async (
   })
   return response.data
 }
+
+export interface ProgressData {
+  document_id: string
+  step: string
+  progress: number
+  message: string
+  status: string
+  timestamp: string
+}
+
+export const getCurrentProgress = async (documentId: string): Promise<ProgressData> => {
+  const response = await api.get<ProgressData>(`/progress/progress/${documentId}/current`)
+  return response.data
+}

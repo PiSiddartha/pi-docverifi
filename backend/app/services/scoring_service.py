@@ -3,6 +3,7 @@ Scoring Service for document verification
 """
 from typing import Dict, Optional
 import logging
+import re
 from difflib import SequenceMatcher
 
 logger = logging.getLogger(__name__)
@@ -10,6 +11,28 @@ logger = logging.getLogger(__name__)
 
 class ScoringService:
     """Service for calculating verification scores"""
+    
+    @staticmethod
+    def normalize_company_number(company_number: Optional[str]) -> Optional[str]:
+        """
+        Normalize UK company number to 8-digit format
+        Handles both 7-digit (3035678) and 8-digit (03035678) formats
+        """
+        if not company_number:
+            return None
+        
+        # Remove spaces and convert to uppercase
+        normalized = re.sub(r'[\s\-]', '', str(company_number).upper())
+        
+        # If it's 7 digits, pad with leading zero
+        if normalized.isdigit() and len(normalized) == 7:
+            normalized = '0' + normalized
+        
+        # Validate it's now 8 digits or 2 letters + 6 digits
+        if re.match(r'^([A-Z]{2}\d{6}|\d{8})$', normalized):
+            return normalized
+        
+        return company_number  # Return original if can't normalize
     
     @staticmethod
     def calculate_similarity(str1: Optional[str], str2: Optional[str]) -> float:
@@ -36,20 +59,31 @@ class ScoringService:
     ) -> float:
         """
         Calculate registry match score (0-40)
+        Normalizes company numbers before comparison to handle 7-digit vs 8-digit formats
         """
         if not ocr_company_number or not companies_house_company_number:
             return 0.0
         
-        # Exact match
-        if ocr_company_number.upper() == companies_house_company_number.upper():
+        # Normalize both numbers to 8-digit format for comparison
+        ocr_normalized = ScoringService.normalize_company_number(ocr_company_number)
+        ch_normalized = ScoringService.normalize_company_number(companies_house_company_number)
+        
+        if not ocr_normalized or not ch_normalized:
+            return 0.0
+        
+        # Exact match after normalization
+        if ocr_normalized == ch_normalized:
+            logger.info(f"Registry match: {ocr_company_number} (normalized: {ocr_normalized}) == {companies_house_company_number} (normalized: {ch_normalized})")
             return 40.0
         
         # Partial match (some characters differ)
         similarity = ScoringService.calculate_similarity(
-            ocr_company_number, companies_house_company_number
+            ocr_normalized, ch_normalized
         )
         
-        return similarity * 40.0
+        score = similarity * 40.0
+        logger.info(f"Registry partial match: {ocr_company_number} vs {companies_house_company_number}, similarity: {similarity:.2f}, score: {score:.2f}")
+        return score
     
     @staticmethod
     def calculate_provided_data_accuracy(
@@ -127,11 +161,12 @@ class ScoringService:
             scores.append(ocr_ch_name)
         
         if ocr_data.get("company_number") and companies_house_data.get("company_number"):
-            ocr_ch_num = ScoringService.calculate_similarity(
-                ocr_data["company_number"],
-                companies_house_data["company_number"]
-            )
-            scores.append(ocr_ch_num)
+            # Normalize company numbers before comparison
+            ocr_num = ScoringService.normalize_company_number(ocr_data["company_number"])
+            ch_num = ScoringService.normalize_company_number(companies_house_data["company_number"])
+            if ocr_num and ch_num:
+                ocr_ch_num = ScoringService.calculate_similarity(ocr_num, ch_num)
+                scores.append(ocr_ch_num)
         
         # Compare Merchant vs Companies House
         if merchant_data.get("company_name") and companies_house_data.get("company_name"):
@@ -142,11 +177,12 @@ class ScoringService:
             scores.append(merch_ch_name)
         
         if merchant_data.get("company_number") and companies_house_data.get("company_number"):
-            merch_ch_num = ScoringService.calculate_similarity(
-                merchant_data["company_number"],
-                companies_house_data["company_number"]
-            )
-            scores.append(merch_ch_num)
+            # Normalize company numbers before comparison
+            merch_num = ScoringService.normalize_company_number(merchant_data["company_number"])
+            ch_num = ScoringService.normalize_company_number(companies_house_data["company_number"])
+            if merch_num and ch_num:
+                merch_ch_num = ScoringService.calculate_similarity(merch_num, ch_num)
+                scores.append(merch_ch_num)
         
         if not scores:
             return 0.0

@@ -4,6 +4,7 @@ Companies House API Service
 import requests
 from typing import Dict, Optional
 import logging
+import re
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -68,10 +69,49 @@ class CompaniesHouseService:
             logger.error(f"Error searching company: {e}")
             return None
     
+    @staticmethod
+    def validate_company_number_format(company_number: str) -> bool:
+        """
+        Validate UK Companies House number format
+        Formats:
+        - 8 digits (e.g., 01234567) - England and Wales limited companies
+        - 2 letters + 6 digits (e.g., SC555555) - Scottish companies or LLPs
+        """
+        if not company_number:
+            return False
+        
+        company_number = company_number.upper().strip()
+        # Remove spaces and common separators
+        company_number = re.sub(r'[\s\-]', '', company_number)
+        
+        # Check format: 8 digits OR 2 letters + 6 digits
+        pattern = r'^([A-Z]{2}\d{6}|\d{8})$'
+        return bool(re.match(pattern, company_number))
+    
     def extract_company_data(self, company_number: str) -> Dict:
         """
-        Extract all relevant company data
+        Extract company data from Companies House API
+        Validates and normalizes company number format before lookup
         """
+        # Validate and normalize company number
+        if not self.validate_company_number_format(company_number):
+            logger.warning(f"Invalid UK Companies House number format: {company_number}")
+            return {
+                "company_name": None,
+                "company_number": None,
+                "address": None,
+                "date": None,
+                "officers": None,
+                "data": None
+            }
+        
+        # Normalize: remove spaces, ensure uppercase
+        company_number = company_number.upper().strip()
+        company_number = re.sub(r'[\s\-]', '', company_number)
+        
+        logger.info(f"Looking up Companies House data for: {company_number}")
+        
+        # Get company profile and officers
         profile = self.get_company_profile(company_number)
         officers = self.get_company_officers(company_number)
         
