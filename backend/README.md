@@ -81,7 +81,7 @@ backend/
 │   ├── core/             # Configuration
 │   ├── db/               # Database models and connection
 │   └── services/         # Business logic (OCR, Forensic, Scoring)
-├── alembic/              # Database migrations
+├── migrations/           # SQL migration scripts
 ├── requirements.txt      # Python dependencies
 ├── ENV_EXAMPLE.txt      # Environment variables template
 └── run.py               # Application entry point
@@ -91,5 +91,6 @@ backend/
 
 - Python 3.11 or 3.12 (3.13 has compatibility issues)
 - PostgreSQL database
-- Tesseract OCR
-- Poppler (for PDF processing)
+- Poppler (for PDF processing - only needed for PDF fallback conversion)
+- AWS Textract (for OCR - primary method)
+

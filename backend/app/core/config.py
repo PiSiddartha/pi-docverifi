@@ -1,6 +1,7 @@
 """
 Application configuration
 """
+import os
 from pydantic_settings import BaseSettings
 from typing import List, Union
 from pydantic import field_validator, field_serializer
@@ -30,7 +31,15 @@ class Settings(BaseSettings):
     
     # File Upload
     MAX_UPLOAD_SIZE: int = 10485760  # 10MB
+    # Use /tmp in Lambda, ./uploads locally
     UPLOAD_DIR: str = "./uploads"
+    
+    # SQS Queue (for async processing)
+    SQS_QUEUE_URL: str = ""
+    USE_SQS: bool = False  # Set to True to use SQS instead of BackgroundTasks
+    
+    # Ollama LLM Configuration
+    OLLAMA_BASE_URL: str = "http://localhost:11434"  # Default Ollama API URL
     
     @field_validator('CORS_ORIGINS', mode='before')
     @classmethod

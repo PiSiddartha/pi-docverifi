@@ -91,11 +91,23 @@ class CompaniesHouseService:
     def extract_company_data(self, company_number: str) -> Dict:
         """
         Extract company data from Companies House API
-        Validates and normalizes company number format before lookup
+        Normalizes company number format before lookup (handles 6, 7, 8 digit numbers)
         """
-        # Validate and normalize company number
+        # Normalize first: remove spaces, ensure uppercase
+        company_number = company_number.upper().strip()
+        company_number = re.sub(r'[\s\-]', '', company_number)
+        
+        # Normalize to 8-digit format if it's all digits
+        if company_number.isdigit():
+            if len(company_number) == 6:
+                company_number = '00' + company_number  # 6 digits -> 8 digits
+            elif len(company_number) == 7:
+                company_number = '0' + company_number    # 7 digits -> 8 digits
+            # 8 digits is already correct
+        
+        # Validate format after normalization
         if not self.validate_company_number_format(company_number):
-            logger.warning(f"Invalid UK Companies House number format: {company_number}")
+            logger.warning(f"Invalid UK Companies House number format after normalization: {company_number}")
             return {
                 "company_name": None,
                 "company_number": None,
@@ -104,10 +116,6 @@ class CompaniesHouseService:
                 "officers": None,
                 "data": None
             }
-        
-        # Normalize: remove spaces, ensure uppercase
-        company_number = company_number.upper().strip()
-        company_number = re.sub(r'[\s\-]', '', company_number)
         
         logger.info(f"Looking up Companies House data for: {company_number}")
         

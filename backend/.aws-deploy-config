@@ -1,0 +1,6 @@
+AWS_ACCOUNT_ID=177215708218
+AWS_REGION=ap-south-1
+SQS_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/177215708218/pi-docverifi-processing
+LAMBDA_ROLE_ARN=arn:aws:iam::177215708218:role/pi-docverifi-lambda-role
+ECS_TASK_ROLE_ARN=arn:aws:iam::177215708218:role/pi-docverifi-ecs-task-role
+ECS_EXEC_ROLE_ARN=arn:aws:iam::177215708218:role/pi-docverifi-ecs-exec-role

@@ -10,7 +10,9 @@ import uuid
 import shutil
 from pathlib import Path
 import io
+import json
 import logging
+import boto3
 
 from app.db.database import get_db
 from app.db.models import DocumentVerification
@@ -39,6 +41,7 @@ def truncate_string(value: str, max_length: int) -> str:
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    document_type: str = "companies_house",  # Default to companies_house
     company_name: Optional[str] = None,
     company_number: Optional[str] = None,
     address: Optional[str] = None,
@@ -70,7 +73,11 @@ async def upload_document(
     file_obj = io.BytesIO(file_content)
     
     # Always save locally first (required for processing and satisfies NOT NULL constraint)
-    upload_dir = Path(settings.UPLOAD_DIR)
+    # Use /tmp in Lambda environment, otherwise use configured UPLOAD_DIR
+    if os.getenv("LAMBDA_TASK_ROOT"):
+        upload_dir = Path("/tmp/uploads")
+    else:
+        upload_dir = Path(settings.UPLOAD_DIR)
     upload_dir.mkdir(parents=True, exist_ok=True)
     file_path = upload_dir / filename
     await file.seek(0)
@@ -100,12 +107,20 @@ async def upload_document(
     merchant_company_number = truncate_string(company_number, 50) if company_number else None
     merchant_date = truncate_string(date, 50) if date else None
     
+    # Validate document type
+    from app.db.models import DocumentType
+    valid_types = [dt.value for dt in DocumentType]
+    if document_type not in valid_types:
+        logger.warning(f"Invalid document type: {document_type}, defaulting to companies_house")
+        document_type = DocumentType.COMPANIES_HOUSE.value
+    
     # Create database record
     db_record = DocumentVerification(
         document_id=document_id,
         filename=file.filename,
         file_path=str(file_path),
         s3_key=s3_key,
+        document_type=document_type,
         merchant_company_name=merchant_company_name,
         merchant_company_number=merchant_company_number,
         merchant_address=address,  # TEXT column, no truncation needed
@@ -117,10 +132,30 @@ async def upload_document(
     db.commit()
     db.refresh(db_record)
     
-    # Auto-start processing in background
+    # Auto-start processing - use SQS if configured, otherwise BackgroundTasks
     logger.info(f"[UPLOAD] Document uploaded successfully. document_id: {document_id}, filename: {file.filename}, file_path: {file_path}, s3_key: {s3_key}")
-    logger.info(f"[UPLOAD] Starting background processing task for document_id: {document_id}")
-    background_tasks.add_task(process_document_verification, document_id)
+    
+    if settings.USE_SQS and settings.SQS_QUEUE_URL:
+        # Send to SQS queue for async processing
+        try:
+            sqs = boto3.client('sqs', region_name=settings.AWS_REGION)
+            sqs.send_message(
+                QueueUrl=settings.SQS_QUEUE_URL,
+                MessageBody=json.dumps({
+                    "document_id": document_id,
+                    "action": "process"
+                })
+            )
+            logger.info(f"[UPLOAD] Message sent to SQS queue for document_id: {document_id}")
+        except Exception as e:
+            logger.error(f"[UPLOAD] Failed to send message to SQS: {e}")
+            # Fallback to BackgroundTasks
+            background_tasks.add_task(process_document_verification, document_id)
+            logger.info(f"[UPLOAD] Falling back to BackgroundTasks for document_id: {document_id}")
+    else:
+        # Use BackgroundTasks (default for local development)
+        logger.info(f"[UPLOAD] Starting background processing task for document_id: {document_id}")
+        background_tasks.add_task(process_document_verification, document_id)
     
     return {
         "document_id": document_id,

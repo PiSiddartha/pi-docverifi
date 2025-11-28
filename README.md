@@ -99,9 +99,10 @@ AWS_S3_BUCKET=your-s3-bucket-name
 createdb docverifi_db
 ```
 
-8. Run migrations (if using Alembic):
+8. Run database migrations:
 ```bash
-alembic upgrade head
+# Apply SQL migrations from the migrations/ directory
+psql -d docverifi_db -f migrations/add_document_type.sql
 ```
 
 9. Start the server:

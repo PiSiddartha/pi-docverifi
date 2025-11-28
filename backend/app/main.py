@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1 import router as api_router
 # Note: Tables should be created manually using database_schema.sql
-# or via Alembic migrations. Uncomment below if you want auto-creation:
+# or SQL migrations from the migrations/ directory.
+# Uncomment below if you want auto-creation (not recommended for production):
 # from app.db.database import engine
 # from app.db.models import Base
 # Base.metadata.create_all(bind=engine)

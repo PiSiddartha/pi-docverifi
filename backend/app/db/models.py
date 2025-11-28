@@ -16,6 +16,14 @@ class VerificationStatus(str, enum.Enum):
     MANUAL_REVIEW = "manual_review"
 
 
+class DocumentType(str, enum.Enum):
+    COMPANIES_HOUSE = "companies_house"
+    # Future types can be added here:
+    # ID_DOCUMENT = "id_document"
+    # PASSPORT = "passport"
+    # DRIVER_LICENSE = "driver_license"
+
+
 class DocumentVerification(Base):
     __tablename__ = "document_verifications"
     
@@ -24,6 +32,9 @@ class DocumentVerification(Base):
     filename = Column(String)
     file_path = Column(String)
     s3_key = Column(String, nullable=True)
+    
+    # Document type - determines which verification pipeline to use
+    document_type = Column(String, default="companies_house", index=True)  # companies_house, id_document, passport, etc.
     
     # Merchant provided data
     merchant_company_name = Column(String, nullable=True)

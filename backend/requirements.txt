@@ -3,12 +3,12 @@ uvicorn[standard]==0.27.0
 python-multipart==0.0.6
 sqlalchemy==2.0.25
 psycopg2-binary==2.9.9
-alembic==1.13.1
 pydantic>=2.9.0
 pydantic-settings==2.1.0
 python-dotenv==1.0.0
 requests==2.31.0
-pytesseract==0.3.10
+# pytesseract==0.3.10  # Not needed - using AWS Textract instead
+mangum==0.17.0  # For Lambda adapter
 Pillow>=10.3.0
 pdf2image==1.16.3
 opencv-python==4.9.0.80
@@ -23,5 +23,5 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-dateutil==2.8.2
 pypdf==3.17.0
-hashlib-compat==1.0.1
+# hashlib-compat==1.0.1  # Not needed - hashlib is built into Python 3
 
