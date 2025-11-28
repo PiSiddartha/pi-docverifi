@@ -8,6 +8,7 @@ import ProgressBar from './ProgressBar'
 
 export default function DocumentUpload() {
   const [file, setFile] = useState<File | null>(null)
+  const [documentType, setDocumentType] = useState('companies_house')
   const [companyName, setCompanyName] = useState('')
   const [companyNumber, setCompanyNumber] = useState('')
   const [address, setAddress] = useState('')
@@ -43,6 +44,7 @@ export default function DocumentUpload() {
     try {
       const result = await uploadDocument(
         file,
+        documentType,
         companyName || undefined,
         companyNumber || undefined,
         address || undefined,
@@ -116,6 +118,26 @@ export default function DocumentUpload() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Document Type Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Document Type <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={documentType}
+            onChange={(e) => setDocumentType(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white"
+          >
+            <option value="companies_house">Companies House Document</option>
+            {/* Future document types can be added here */}
+            {/* <option value="id_document">ID Document</option> */}
+            {/* <option value="passport">Passport</option> */}
+          </select>
+          <p className="text-sm text-gray-500 mt-1">
+            Select the type of document you are uploading. This determines which verification pipeline will be used.
+          </p>
         </div>
 
         {/* Optional Fields */}
@@ -216,6 +238,7 @@ export default function DocumentUpload() {
                 setProcessing(false)
                 // Reset form after processing completes
                 setFile(null)
+                setDocumentType('companies_house')
                 setCompanyName('')
                 setCompanyNumber('')
                 setAddress('')

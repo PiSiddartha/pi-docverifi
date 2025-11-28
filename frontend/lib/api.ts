@@ -64,6 +64,7 @@ export interface DocumentListItem {
 
 export const uploadDocument = async (
   file: File,
+  documentType: string = 'companies_house',
   companyName?: string,
   companyNumber?: string,
   address?: string,
@@ -71,6 +72,7 @@ export const uploadDocument = async (
 ): Promise<DocumentUploadResponse> => {
   const formData = new FormData()
   formData.append('file', file)
+  formData.append('document_type', documentType)
   if (companyName) formData.append('company_name', companyName)
   if (companyNumber) formData.append('company_number', companyNumber)
   if (address) formData.append('address', address)
