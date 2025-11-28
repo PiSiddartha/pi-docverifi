@@ -45,7 +45,7 @@ export default function DocumentDetail({ document, onBack, onProcess, onReview }
         </button>
 
         <div className="mb-6">
-          <h2 className="text-2xl font-semibold mb-2">{document.filename}</h2>
+          <h2 className="text-2xl font-semibold mb-2 text-gray-900">{document.filename}</h2>
           <div className="flex items-center space-x-4">
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
               document.status === 'passed' ? 'bg-green-100 text-green-800' :

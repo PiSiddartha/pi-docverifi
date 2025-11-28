@@ -141,7 +141,7 @@ export default function DocumentList() {
                     <td className="py-3 px-4">
                       <div className="flex items-center space-x-2">
                         <File className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm">{doc.filename}</span>
+                        <span className="text-sm text-gray-900">{doc.filename}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
