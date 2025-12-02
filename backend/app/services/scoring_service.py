@@ -423,4 +423,249 @@ class ScoringService:
             "decision": decision,
             "forensic_penalty": forensic_penalty
         }
+    
+    @staticmethod
+    def process_vat_scoring(
+        ocr_data: Dict,
+        merchant_data: Dict,
+        hmrc_data: Dict,
+        forensic_penalty: float
+    ) -> Dict:
+        """
+        Process scoring for VAT Registration documents
+        
+        Args:
+            ocr_data: OCR extracted data (vat_number, business_name, address, registration_date)
+            merchant_data: Merchant provided data
+            hmrc_data: HMRC API data
+            forensic_penalty: Penalty from forensic analysis
+            
+        Returns:
+            Dictionary with scoring results
+        """
+        # OCR Score (0-40): Based on OCR confidence and field extraction quality
+        ocr_confidence = ocr_data.get("confidence", 0.0)
+        ocr_score = (ocr_confidence / 100.0) * 40.0
+        
+        # Adjust OCR score based on fields extracted
+        fields_extracted = sum([
+            1 if ocr_data.get("vat_number") else 0,
+            1 if ocr_data.get("business_name") else 0,
+            1 if ocr_data.get("address") else 0,
+            1 if ocr_data.get("registration_date") else 0
+        ])
+        field_bonus = (fields_extracted / 4.0) * 5.0  # Up to 5 bonus points
+        ocr_score = min(40.0, ocr_score + field_bonus)
+        
+        # Registry Score (0-30): HMRC VAT verification
+        registry_score = 0.0
+        if hmrc_data and hmrc_data.get("vat_number"):
+            # VAT number verified
+            registry_score = 20.0
+            
+            # Additional points for matching business name
+            if ocr_data.get("business_name") and hmrc_data.get("business_name"):
+                name_sim = ScoringService.calculate_similarity(
+                    ocr_data["business_name"],
+                    hmrc_data["business_name"]
+                )
+                registry_score += name_sim * 10.0  # Up to 10 more points
+        
+        # Provided Score (0-30): Merchant data vs HMRC data
+        provided_score = 0.0
+        if merchant_data and hmrc_data:
+            scores = []
+            
+            # VAT number match
+            if merchant_data.get("vat_number") and hmrc_data.get("vat_number"):
+                vat_sim = ScoringService.calculate_similarity(
+                    merchant_data["vat_number"],
+                    hmrc_data["vat_number"]
+                )
+                scores.append(vat_sim * 15.0)  # Up to 15 points
+            
+            # Business name match
+            if merchant_data.get("business_name") and hmrc_data.get("business_name"):
+                name_sim = ScoringService.calculate_similarity(
+                    merchant_data["business_name"],
+                    hmrc_data["business_name"]
+                )
+                scores.append(name_sim * 15.0)  # Up to 15 points
+            
+            if scores:
+                provided_score = sum(scores) / len(scores) if scores else 0.0
+        
+        # Data Match Score: OCR vs HMRC
+        data_match_score = 0.0
+        if ocr_data and hmrc_data:
+            match_scores = []
+            
+            if ocr_data.get("vat_number") and hmrc_data.get("vat_number"):
+                vat_sim = ScoringService.calculate_similarity(
+                    ocr_data["vat_number"],
+                    hmrc_data["vat_number"]
+                )
+                match_scores.append(vat_sim)
+            
+            if ocr_data.get("business_name") and hmrc_data.get("business_name"):
+                name_sim = ScoringService.calculate_similarity(
+                    ocr_data["business_name"],
+                    hmrc_data["business_name"]
+                )
+                match_scores.append(name_sim)
+            
+            if match_scores:
+                data_match_score = (sum(match_scores) / len(match_scores)) * 100.0
+        
+        # Final Score
+        final_score = ocr_score + registry_score + provided_score - forensic_penalty
+        final_score = max(0.0, final_score)
+        
+        # Decision
+        if final_score >= 75:
+            decision = "PASS"
+        elif final_score >= 50:
+            decision = "REVIEW"
+        else:
+            decision = "FAIL"
+        
+        return {
+            "ocr_score": ocr_score,
+            "registry_score": registry_score,
+            "provided_score": provided_score,
+            "data_match_score": data_match_score,
+            "final_score": final_score,
+            "decision": decision,
+            "forensic_penalty": forensic_penalty
+        }
+    
+    @staticmethod
+    def process_director_scoring(
+        ocr_data: Dict,
+        merchant_data: Dict,
+        companies_house_data: Dict,
+        forensic_penalty: float
+    ) -> Dict:
+        """
+        Process scoring for Director Verification documents
+        
+        Args:
+            ocr_data: OCR extracted data (director_name, date_of_birth, address, company_name, appointment_date)
+            merchant_data: Merchant provided data
+            companies_house_data: Companies House director verification data
+            forensic_penalty: Penalty from forensic analysis
+            
+        Returns:
+            Dictionary with scoring results
+        """
+        # OCR Score (0-40): Based on OCR confidence and field extraction quality
+        ocr_confidence = ocr_data.get("confidence", 0.0)
+        ocr_score = (ocr_confidence / 100.0) * 40.0
+        
+        # Adjust OCR score based on fields extracted
+        fields_extracted = sum([
+            1 if ocr_data.get("director_name") else 0,
+            1 if ocr_data.get("date_of_birth") else 0,
+            1 if ocr_data.get("address") else 0,
+            1 if ocr_data.get("company_name") else 0,
+            1 if ocr_data.get("appointment_date") else 0
+        ])
+        field_bonus = (fields_extracted / 5.0) * 5.0  # Up to 5 bonus points
+        ocr_score = min(40.0, ocr_score + field_bonus)
+        
+        # Registry Score (0-30): Companies House director verification
+        registry_score = 0.0
+        if companies_house_data and companies_house_data.get("verified"):
+            # Director verified in Companies House
+            registry_score = 20.0
+            
+            # Additional points for matching details
+            if companies_house_data.get("director_data"):
+                director_data = companies_house_data["director_data"]
+                
+                # Name match
+                if ocr_data.get("director_name") and director_data.get("name"):
+                    name_sim = ScoringService.calculate_similarity(
+                        ocr_data["director_name"],
+                        director_data["name"]
+                    )
+                    registry_score += name_sim * 5.0  # Up to 5 more points
+                
+                # DOB match (if available)
+                if ocr_data.get("date_of_birth") and director_data.get("date_of_birth"):
+                    dob_match = ScoringService.calculate_similarity(
+                        str(ocr_data["date_of_birth"]),
+                        str(director_data["date_of_birth"])
+                    )
+                    registry_score += dob_match * 5.0  # Up to 5 more points
+        
+        # Provided Score (0-30): Merchant data vs Companies House data
+        provided_score = 0.0
+        if merchant_data and companies_house_data and companies_house_data.get("director_data"):
+            director_data = companies_house_data["director_data"]
+            scores = []
+            
+            # Director name match
+            if merchant_data.get("director_name") and director_data.get("name"):
+                name_sim = ScoringService.calculate_similarity(
+                    merchant_data["director_name"],
+                    director_data["name"]
+                )
+                scores.append(name_sim * 15.0)  # Up to 15 points
+            
+            # DOB match
+            if merchant_data.get("date_of_birth") and director_data.get("date_of_birth"):
+                dob_sim = ScoringService.calculate_similarity(
+                    str(merchant_data["date_of_birth"]),
+                    str(director_data["date_of_birth"])
+                )
+                scores.append(dob_sim * 15.0)  # Up to 15 points
+            
+            if scores:
+                provided_score = sum(scores) / len(scores) if scores else 0.0
+        
+        # Data Match Score: OCR vs Companies House
+        data_match_score = 0.0
+        if ocr_data and companies_house_data and companies_house_data.get("director_data"):
+            director_data = companies_house_data["director_data"]
+            match_scores = []
+            
+            if ocr_data.get("director_name") and director_data.get("name"):
+                name_sim = ScoringService.calculate_similarity(
+                    ocr_data["director_name"],
+                    director_data["name"]
+                )
+                match_scores.append(name_sim)
+            
+            if ocr_data.get("date_of_birth") and director_data.get("date_of_birth"):
+                dob_sim = ScoringService.calculate_similarity(
+                    str(ocr_data["date_of_birth"]),
+                    str(director_data["date_of_birth"])
+                )
+                match_scores.append(dob_sim)
+            
+            if match_scores:
+                data_match_score = (sum(match_scores) / len(match_scores)) * 100.0
+        
+        # Final Score
+        final_score = ocr_score + registry_score + provided_score - forensic_penalty
+        final_score = max(0.0, final_score)
+        
+        # Decision
+        if final_score >= 75:
+            decision = "PASS"
+        elif final_score >= 50:
+            decision = "REVIEW"
+        else:
+            decision = "FAIL"
+        
+        return {
+            "ocr_score": ocr_score,
+            "registry_score": registry_score,
+            "provided_score": provided_score,
+            "data_match_score": data_match_score,
+            "final_score": final_score,
+            "decision": decision,
+            "forensic_penalty": forensic_penalty
+        }
 

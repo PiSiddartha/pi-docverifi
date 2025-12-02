@@ -1,0 +1,99 @@
+{
+  "director_verification_samples": [
+    {
+      "description": "Standard Director Verification - Limited Company",
+      "director_name": "JOHN MICHAEL SMITH",
+      "director_dob": "1975-05-15",
+      "company_name": "TECHNOLOGY SOLUTIONS LIMITED",
+      "company_number": "12345678",
+      "appointment_date": "2020-01-10",
+      "director_address": "45 Oak Avenue, London, SW1A 2BB",
+      "ocr_text_template": "COMPANIES HOUSE\nDIRECTOR VERIFICATION DOCUMENT\n\nDirector Name: JOHN MICHAEL SMITH\n\nDate of Birth: 15 May 1975\n\nResidential Address:\n45 Oak Avenue\nLondon\nSW1A 2BB\n\nCompany Name: TECHNOLOGY SOLUTIONS LIMITED\nCompany Number: 12345678\n\nDate of Appointment: 10 January 2020\n\nThis document confirms that the above named person is a director of the company listed.\n\nCertificate Number: DIR/2020/001234\n\nIssued by Companies House"
+    },
+    {
+      "description": "Director Verification - Multiple Directors",
+      "director_name": "SARAH ELIZABETH JONES",
+      "director_dob": "1982-11-22",
+      "company_name": "RETAIL VENTURES PLC",
+      "company_number": "87654321",
+      "appointment_date": "2019-06-15",
+      "director_address": "78 Park Lane, Manchester, M2 3CC",
+      "ocr_text_template": "COMPANIES HOUSE\nDIRECTOR APPOINTMENT CERTIFICATE\n\nDirector: SARAH ELIZABETH JONES\n\nDate of Birth: 22 November 1982\n\nAddress:\n78 Park Lane\nManchester\nM2 3CC\n\nAppointed as Director of:\nRETAIL VENTURES PLC\nCompany Number: 87654321\n\nAppointment Date: 15 June 2019\n\nThis certificate verifies the directorship appointment.\n\nReference: DIR/2019/005678"
+    },
+    {
+      "description": "Director Verification - Scottish Company",
+      "director_name": "DAVID ROBERT BROWN",
+      "director_dob": "1968-03-08",
+      "company_name": "SCOTTISH MANUFACTURING LTD",
+      "company_number": "SC123456",
+      "appointment_date": "2021-02-20",
+      "director_address": "12 Royal Mile, Edinburgh, EH1 1AA",
+      "ocr_text_template": "COMPANIES HOUSE\nDIRECTOR VERIFICATION\n\nName: DAVID ROBERT BROWN\n\nBorn: 08 March 1968\n\nResidential Address:\n12 Royal Mile\nEdinburgh\nEH1 1AA\nScotland\n\nCompany: SCOTTISH MANUFACTURING LTD\nCompany Number: SC123456\n\nDate of Appointment: 20 February 2021\n\nDirector Verification Certificate\nIssued by Companies House, Edinburgh"
+    },
+    {
+      "description": "Director Verification - Recent Appointment",
+      "director_name": "EMMA LOUISE WILSON",
+      "director_dob": "1990-09-12",
+      "company_name": "DIGITAL INNOVATIONS LIMITED",
+      "company_number": "11223344",
+      "appointment_date": "2023-01-05",
+      "director_address": "34 Innovation Drive, Cambridge, CB2 1AA",
+      "ocr_text_template": "COMPANIES HOUSE\nDIRECTOR APPOINTMENT VERIFICATION\n\nDirector Name: EMMA LOUISE WILSON\n\nDate of Birth: 12 September 1990\n\nAddress:\n34 Innovation Drive\nCambridge\nCB2 1AA\n\nAppointed Director of:\nDIGITAL INNOVATIONS LIMITED\nCompany Registration Number: 11223344\n\nAppointment Effective Date: 05 January 2023\n\nThis document confirms the directorship appointment.\n\nCertificate Reference: DIR/2023/001122"
+    }
+  ],
+  "test_scenarios": {
+    "valid_director": {
+      "director_name": "JOHN MICHAEL SMITH",
+      "director_dob": "1975-05-15",
+      "company_number": "12345678",
+      "expected_result": "verified"
+    },
+    "director_not_found": {
+      "director_name": "NONEXISTENT PERSON",
+      "director_dob": "1980-01-01",
+      "company_number": "99999999",
+      "expected_result": "not_found"
+    },
+    "name_variations": {
+      "variations": [
+        "JOHN M SMITH",
+        "JOHN MICHAEL SMITH",
+        "J. M. SMITH",
+        "JOHN SMITH"
+      ],
+      "expected_result": "fuzzy_match"
+    },
+    "dob_formats": {
+      "formats": [
+        "1975-05-15",
+        "15/05/1975",
+        "15 May 1975",
+        "19750515"
+      ],
+      "expected_result": "normalized"
+    }
+  },
+  "companies_house_test_data": {
+    "company_12345678": {
+      "company_name": "TECHNOLOGY SOLUTIONS LIMITED",
+      "company_number": "12345678",
+      "directors": [
+        {
+          "name": "JOHN MICHAEL SMITH",
+          "date_of_birth": {
+            "month": 5,
+            "year": 1975
+          },
+          "address": {
+            "premises": "45",
+            "address_line_1": "Oak Avenue",
+            "locality": "London",
+            "postal_code": "SW1A 2BB"
+          },
+          "appointed_on": "2020-01-10"
+        }
+      ]
+    }
+  }
+}
+

@@ -1,11 +1,11 @@
 """
-Database models for refactored table structure
+New Database models for refactored table structure
 """
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.database import Base
 import enum
-from typing import Optional, Type, Union
 
 
 class VerificationStatus(str, enum.Enum):
@@ -72,11 +72,13 @@ class CompaniesHouseDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(String, unique=True, nullable=False, index=True)
     
+    # Merchant provided data
     merchant_company_name = Column(Text, nullable=True)
     merchant_company_number = Column(String(50), nullable=True)
     merchant_address = Column(Text, nullable=True)
     merchant_date = Column(String(50), nullable=True)
     
+    # OCR extracted data
     ocr_company_name = Column(Text, nullable=True)
     ocr_company_number = Column(String(50), nullable=True)
     ocr_address = Column(Text, nullable=True)
@@ -84,6 +86,7 @@ class CompaniesHouseDocument(Base):
     ocr_confidence = Column(Float, nullable=True)
     ocr_raw_text = Column(Text, nullable=True)
     
+    # Companies House API data
     companies_house_company_name = Column(Text, nullable=True)
     companies_house_company_number = Column(String(50), nullable=True)
     companies_house_address = Column(Text, nullable=True)
@@ -91,12 +94,14 @@ class CompaniesHouseDocument(Base):
     companies_house_officers = Column(JSON, nullable=True)
     companies_house_data = Column(JSON, nullable=True)
     
+    # Scoring
     ocr_score = Column(Float, default=0.0)
     registry_score = Column(Float, default=0.0)
     provided_score = Column(Float, default=0.0)
     data_match_score = Column(Float, default=0.0)
     final_score = Column(Float, default=0.0)
     
+    # Comparison
     registry_match_score = Column(Float, nullable=True)
     registry_data = Column(JSON, nullable=True)
     comparison_details = Column(JSON, nullable=True)
@@ -113,11 +118,13 @@ class CompanyRegistrationDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(String, unique=True, nullable=False, index=True)
     
+    # Merchant provided data
     merchant_company_name = Column(Text, nullable=True)
     merchant_company_number = Column(String(50), nullable=True)
     merchant_address = Column(Text, nullable=True)
     merchant_date = Column(String(50), nullable=True)
     
+    # OCR extracted data
     ocr_company_name = Column(Text, nullable=True)
     ocr_company_number = Column(String(50), nullable=True)
     ocr_address = Column(Text, nullable=True)
@@ -125,6 +132,7 @@ class CompanyRegistrationDocument(Base):
     ocr_confidence = Column(Float, nullable=True)
     ocr_raw_text = Column(Text, nullable=True)
     
+    # Companies House API data
     companies_house_company_name = Column(Text, nullable=True)
     companies_house_company_number = Column(String(50), nullable=True)
     companies_house_address = Column(Text, nullable=True)
@@ -132,12 +140,14 @@ class CompanyRegistrationDocument(Base):
     companies_house_officers = Column(JSON, nullable=True)
     companies_house_data = Column(JSON, nullable=True)
     
+    # Scoring
     ocr_score = Column(Float, default=0.0)
     registry_score = Column(Float, default=0.0)
     provided_score = Column(Float, default=0.0)
     data_match_score = Column(Float, default=0.0)
     final_score = Column(Float, default=0.0)
     
+    # Comparison
     registry_match_score = Column(Float, nullable=True)
     registry_data = Column(JSON, nullable=True)
     comparison_details = Column(JSON, nullable=True)
@@ -154,10 +164,12 @@ class VATRegistrationDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(String, unique=True, nullable=False, index=True)
     
+    # Merchant provided data
     merchant_vat_number = Column(String(50), nullable=True)
     merchant_business_name = Column(Text, nullable=True)
     merchant_address = Column(Text, nullable=True)
     
+    # OCR extracted data
     ocr_vat_number = Column(String(50), nullable=True)
     ocr_business_name = Column(Text, nullable=True)
     ocr_vat_address = Column(Text, nullable=True)
@@ -165,18 +177,21 @@ class VATRegistrationDocument(Base):
     ocr_confidence = Column(Float, nullable=True)
     ocr_raw_text = Column(Text, nullable=True)
     
+    # HMRC API data
     hmrc_vat_number = Column(String(50), nullable=True)
     hmrc_business_name = Column(Text, nullable=True)
     hmrc_address = Column(Text, nullable=True)
     hmrc_registration_date = Column(String(50), nullable=True)
     hmrc_vat_data = Column(JSON, nullable=True)
     
+    # Scoring
     ocr_score = Column(Float, default=0.0)
     registry_score = Column(Float, default=0.0)
     provided_score = Column(Float, default=0.0)
     data_match_score = Column(Float, default=0.0)
     final_score = Column(Float, default=0.0)
     
+    # Comparison
     comparison_details = Column(JSON, nullable=True)
     
     def __repr__(self):
@@ -190,11 +205,13 @@ class DirectorVerificationDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(String, unique=True, nullable=False, index=True)
     
+    # Merchant provided data
     merchant_director_name = Column(String(200), nullable=True)
     merchant_director_dob = Column(String(50), nullable=True)
     merchant_company_name = Column(Text, nullable=True)
     merchant_company_number = Column(String(50), nullable=True)
     
+    # OCR extracted data
     ocr_director_name = Column(String(200), nullable=True)
     ocr_director_dob = Column(String(50), nullable=True)
     ocr_director_address = Column(Text, nullable=True)
@@ -203,6 +220,7 @@ class DirectorVerificationDocument(Base):
     ocr_confidence = Column(Float, nullable=True)
     ocr_raw_text = Column(Text, nullable=True)
     
+    # Companies House API data
     companies_house_director_name = Column(String(200), nullable=True)
     companies_house_director_dob = Column(String(50), nullable=True)
     companies_house_director_address = Column(Text, nullable=True)
@@ -211,40 +229,22 @@ class DirectorVerificationDocument(Base):
     companies_house_company_name = Column(Text, nullable=True)
     companies_house_company_number = Column(String(50), nullable=True)
     
+    # Scoring
     ocr_score = Column(Float, default=0.0)
     registry_score = Column(Float, default=0.0)
     provided_score = Column(Float, default=0.0)
     data_match_score = Column(Float, default=0.0)
     final_score = Column(Float, default=0.0)
     
+    # Comparison
     comparison_details = Column(JSON, nullable=True)
     
     def __repr__(self):
         return f"<DirectorVerificationDocument(document_id={self.document_id}, director={self.ocr_director_name})>"
 
 
-# Helper function to get the type-specific document model
-def get_document_model(document_type: str) -> Type[Base]:
-    """
-    Get the appropriate document model class based on document type
-    
-    Args:
-        document_type: Document type string
-        
-    Returns:
-        SQLAlchemy model class for the document type
-    """
-    mapping = {
-        DocumentType.COMPANIES_HOUSE.value: CompaniesHouseDocument,
-        DocumentType.COMPANY_REGISTRATION.value: CompanyRegistrationDocument,
-        DocumentType.VAT_REGISTRATION.value: VATRegistrationDocument,
-        DocumentType.DIRECTOR_VERIFICATION.value: DirectorVerificationDocument,
-    }
-    
-    return mapping.get(document_type, CompaniesHouseDocument)
-
-
 class AuditLog(Base):
+    """Audit log for document actions"""
     __tablename__ = "audit_logs"
     
     id = Column(Integer, primary_key=True, index=True)

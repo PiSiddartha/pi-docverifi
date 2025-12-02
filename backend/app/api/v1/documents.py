@@ -1,7 +1,7 @@
 """
 Document upload and management endpoints
 """
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks, Form
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -15,7 +15,8 @@ import logging
 import boto3
 
 from app.db.database import get_db
-from app.db.models import DocumentVerification
+from app.db.models import Document, DocumentType
+from app.db.document_helper import create_document_record
 from app.core.config import settings
 from app.api.v1.verification import process_document_verification
 from app.services.s3_service import s3_service
@@ -41,11 +42,18 @@ def truncate_string(value: str, max_length: int) -> str:
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    document_type: str = "companies_house",  # Default to companies_house
-    company_name: Optional[str] = None,
-    company_number: Optional[str] = None,
-    address: Optional[str] = None,
-    date: Optional[str] = None,
+    document_type: str = Form("companies_house"),  # Use Form() for multipart form data
+    # Company/Registration fields
+    company_name: Optional[str] = Form(None),
+    company_number: Optional[str] = Form(None),
+    address: Optional[str] = Form(None),
+    date: Optional[str] = Form(None),
+    # VAT Registration fields
+    vat_number: Optional[str] = Form(None),
+    business_name: Optional[str] = Form(None),
+    # Director Verification fields
+    director_name: Optional[str] = Form(None),
+    director_dob: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -102,35 +110,42 @@ async def upload_document(
             # Clear s3_key to indicate S3 upload failed
             s3_key = None
     
-    # Truncate merchant data to fit database column limits
-    merchant_company_name = truncate_string(company_name, 500) if company_name else None
-    merchant_company_number = truncate_string(company_number, 50) if company_number else None
-    merchant_date = truncate_string(date, 50) if date else None
-    
     # Validate document type
-    from app.db.models import DocumentType
     valid_types = [dt.value for dt in DocumentType]
+    logger.info(f"[UPLOAD] Received document_type: {document_type}")
+    logger.info(f"[UPLOAD] Valid document types: {valid_types}")
     if document_type not in valid_types:
         logger.warning(f"Invalid document type: {document_type}, defaulting to companies_house")
         document_type = DocumentType.COMPANIES_HOUSE.value
+    else:
+        logger.info(f"[UPLOAD] Document type validated: {document_type}")
     
-    # Create database record
-    db_record = DocumentVerification(
+    # Prepare merchant data (no truncation needed - using TEXT columns)
+    merchant_data = {
+        'merchant_company_name': company_name,
+        'merchant_company_number': company_number,
+        'merchant_address': address,
+        'merchant_date': date,
+        'merchant_vat_number': vat_number,
+        'merchant_business_name': business_name,
+        'merchant_director_name': director_name,
+        'merchant_director_dob': director_dob,
+    }
+    
+    # Create database records (base document + type-specific document)
+    base_doc, type_doc = create_document_record(
+        db=db,
         document_id=document_id,
         filename=file.filename,
         file_path=str(file_path),
-        s3_key=s3_key,
         document_type=document_type,
-        merchant_company_name=merchant_company_name,
-        merchant_company_number=merchant_company_number,
-        merchant_address=address,  # TEXT column, no truncation needed
-        merchant_date=merchant_date,
-        status="pending"
+        s3_key=s3_key,
+        **merchant_data
     )
     
-    db.add(db_record)
     db.commit()
-    db.refresh(db_record)
+    db.refresh(base_doc)
+    db.refresh(type_doc)
     
     # Auto-start processing - use SQS if configured, otherwise BackgroundTasks
     logger.info(f"[UPLOAD] Document uploaded successfully. document_id: {document_id}, filename: {file.filename}, file_path: {file_path}, s3_key: {s3_key}")
@@ -172,50 +187,137 @@ async def get_document(
     """
     Get document verification details
     """
-    document = db.query(DocumentVerification).filter(
-        DocumentVerification.document_id == document_id
-    ).first()
+    from app.db.document_helper import get_document_with_type
+    from app.db.models import (
+        CompaniesHouseDocument,
+        CompanyRegistrationDocument,
+        VATRegistrationDocument,
+        DirectorVerificationDocument
+    )
     
-    if not document:
+    result = get_document_with_type(db, document_id)
+    if not result:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    return {
-        "document_id": document.document_id,
-        "filename": document.filename,
-        "status": document.status,
-        "final_score": document.final_score,
-        "decision": document.decision,
-        "created_at": document.created_at.isoformat() if document.created_at else None,
-        "processed_at": document.processed_at.isoformat() if document.processed_at else None,
-        "ocr_data": {
-            "company_name": document.ocr_company_name,
-            "company_number": document.ocr_company_number,
-            "address": document.ocr_address,
-            "date": document.ocr_date,
-            "confidence": document.ocr_confidence
-        },
-        "companies_house_data": {
-            "company_name": document.companies_house_company_name,
-            "company_number": document.companies_house_company_number,
-            "address": document.companies_house_address,
-            "date": document.companies_house_date
-        },
+    base_doc, type_doc = result
+    
+    # Build response based on document type
+    # Get final_score from type_doc if available, otherwise 0.0
+    final_score = type_doc.final_score if type_doc and type_doc.final_score is not None else None
+    
+    response = {
+        "document_id": base_doc.document_id,
+        "filename": base_doc.filename,
+        "document_type": base_doc.document_type,
+        "status": base_doc.status,
+        "decision": base_doc.decision,
+        "final_score": final_score,  # Add at top level for backward compatibility
+        "created_at": base_doc.created_at.isoformat() if base_doc.created_at else None,
+        "processed_at": base_doc.processed_at.isoformat() if base_doc.processed_at else None,
         "forensic_analysis": {
-            "forensic_score": document.forensic_score,
-            "forensic_penalty": document.forensic_penalty,
-            "ela_score": document.ela_score,
-            "jpeg_quality": document.jpeg_quality,
-            "copy_move_detected": document.copy_move_detected,
-            "details": document.forensic_details
+            "forensic_score": base_doc.forensic_score,
+            "forensic_penalty": base_doc.forensic_penalty or 0.0,
+            "ela_score": base_doc.ela_score,
+            "jpeg_quality": base_doc.jpeg_quality,
+            "copy_move_detected": base_doc.copy_move_detected,
+            "details": base_doc.forensic_details
         },
-        "scores": {
-            "ocr_score": document.ocr_score,
-            "registry_score": document.registry_score,
-            "provided_score": document.provided_score,
-            "final_score": document.final_score
-        },
-        "flags": document.flags
+        "flags": base_doc.flags
     }
+    
+    # Add type-specific data
+    if isinstance(type_doc, (CompaniesHouseDocument, CompanyRegistrationDocument)):
+        response["ocr_data"] = {
+            "company_name": type_doc.ocr_company_name,
+            "company_number": type_doc.ocr_company_number,
+            "address": type_doc.ocr_address,
+            "date": type_doc.ocr_date,
+            "confidence": type_doc.ocr_confidence
+        }
+        response["companies_house_data"] = {
+            "company_name": type_doc.companies_house_company_name,
+            "company_number": type_doc.companies_house_company_number,
+            "address": type_doc.companies_house_address,
+            "date": type_doc.companies_house_date
+        }
+        response["scores"] = {
+            "ocr_score": type_doc.ocr_score or 0.0,
+            "registry_score": type_doc.registry_score or 0.0,
+            "provided_score": type_doc.provided_score or 0.0,
+            "final_score": type_doc.final_score or 0.0
+        }
+    elif isinstance(type_doc, VATRegistrationDocument):
+        response["ocr_data"] = {
+            "vat_number": type_doc.ocr_vat_number,
+            "business_name": type_doc.ocr_business_name,
+            "address": type_doc.ocr_vat_address,
+            "registration_date": type_doc.ocr_vat_registration_date,
+            "confidence": type_doc.ocr_confidence
+        }
+        response["hmrc_data"] = {
+            "vat_number": type_doc.hmrc_vat_number,
+            "business_name": type_doc.hmrc_business_name,
+            "address": type_doc.hmrc_address,
+            "registration_date": type_doc.hmrc_registration_date
+        }
+        response["scores"] = {
+            "ocr_score": type_doc.ocr_score or 0.0,
+            "registry_score": type_doc.registry_score or 0.0,
+            "provided_score": type_doc.provided_score or 0.0,
+            "final_score": type_doc.final_score or 0.0
+        }
+    elif isinstance(type_doc, DirectorVerificationDocument):
+        # Get OCR company number from comparison_details if stored there
+        ocr_company_number = None
+        if type_doc.comparison_details and isinstance(type_doc.comparison_details, dict):
+            ocr_company_number = type_doc.comparison_details.get("ocr_company_number")
+        
+        response["ocr_data"] = {
+            "director_name": type_doc.ocr_director_name,
+            "date_of_birth": type_doc.ocr_director_dob,
+            "address": type_doc.ocr_director_address,
+            "company_name": type_doc.ocr_director_company_name,
+            "company_number": ocr_company_number,  # Add OCR-extracted company number
+            "appointment_date": type_doc.ocr_appointment_date,
+            "confidence": type_doc.ocr_confidence
+        }
+        response["companies_house_data"] = {
+            "director_name": type_doc.companies_house_director_name,
+            "date_of_birth": type_doc.companies_house_director_dob,
+            "address": type_doc.companies_house_director_address,
+            "appointment_date": type_doc.companies_house_appointment_date,
+            "company_name": type_doc.companies_house_company_name,
+            "company_number": type_doc.companies_house_company_number
+        }
+        response["scores"] = {
+            "ocr_score": type_doc.ocr_score or 0.0,
+            "registry_score": type_doc.registry_score or 0.0,
+            "provided_score": type_doc.provided_score or 0.0,
+            "final_score": type_doc.final_score or 0.0
+        }
+    else:
+        # No type_doc or unknown type - provide defaults
+        response["ocr_data"] = {
+            "company_name": None,
+            "company_number": None,
+            "address": None,
+            "date": None,
+            "confidence": None
+        }
+        response["companies_house_data"] = {
+            "company_name": None,
+            "company_number": None,
+            "address": None,
+            "date": None
+        }
+        response["scores"] = {
+            "ocr_score": 0.0,
+            "registry_score": 0.0,
+            "provided_score": 0.0,
+            "final_score": 0.0
+        }
+    
+    return response
 
 
 @router.get("/")
@@ -228,31 +330,65 @@ async def list_documents(
     """
     List all documents with pagination
     """
-    query = db.query(DocumentVerification)
+    from app.db.models import (
+        Document,
+        CompaniesHouseDocument,
+        CompanyRegistrationDocument,
+        VATRegistrationDocument,
+        DirectorVerificationDocument
+    )
+    
+    query = db.query(Document)
     
     if status:
         # Validate status against allowed values
         allowed_statuses = ["pending", "processing", "passed", "failed", "review", "manual_review"]
         if status not in allowed_statuses:
             raise HTTPException(status_code=400, detail="Invalid status")
-        query = query.filter(DocumentVerification.status == status)
+        query = query.filter(Document.status == status)
     
     documents = query.order_by(
-        DocumentVerification.created_at.desc()
+        Document.created_at.desc()
     ).offset(skip).limit(limit).all()
     
-    return {
-        "total": len(documents),
-        "documents": [
-            {
+    # Get final scores from type-specific tables
+    document_list = []
+    for doc in documents:
+        # Get final score from type-specific table
+        final_score = 0.0
+        if doc.document_type == DocumentType.COMPANIES_HOUSE.value:
+            type_doc = db.query(CompaniesHouseDocument).filter(
+                CompaniesHouseDocument.document_id == doc.document_id
+            ).first()
+            final_score = type_doc.final_score if type_doc else 0.0
+        elif doc.document_type == DocumentType.COMPANY_REGISTRATION.value:
+            type_doc = db.query(CompanyRegistrationDocument).filter(
+                CompanyRegistrationDocument.document_id == doc.document_id
+            ).first()
+            final_score = type_doc.final_score if type_doc else 0.0
+        elif doc.document_type == DocumentType.VAT_REGISTRATION.value:
+            type_doc = db.query(VATRegistrationDocument).filter(
+                VATRegistrationDocument.document_id == doc.document_id
+            ).first()
+            final_score = type_doc.final_score if type_doc else 0.0
+        elif doc.document_type == DocumentType.DIRECTOR_VERIFICATION.value:
+            type_doc = db.query(DirectorVerificationDocument).filter(
+                DirectorVerificationDocument.document_id == doc.document_id
+            ).first()
+            final_score = type_doc.final_score if type_doc else 0.0
+        
+        document_list.append({
                 "document_id": doc.document_id,
                 "filename": doc.filename,
+            "document_type": doc.document_type,
                 "status": doc.status,
-                "final_score": doc.final_score,
+            "final_score": final_score,
                 "decision": doc.decision,
                 "created_at": doc.created_at.isoformat() if doc.created_at else None
-            }
-            for doc in documents
-        ]
+        })
+    
+    return {
+        "total": len(document_list),
+        "documents": document_list
     }
 

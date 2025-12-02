@@ -169,4 +169,144 @@ class CompaniesHouseService:
         """
         profile = self.get_company_profile(company_number)
         return profile is not None
+    
+    def search_director(self, director_name: str, company_number: Optional[str] = None) -> Optional[Dict]:
+        """
+        Search for director by name, optionally filtered by company
+        
+        Args:
+            director_name: Name of the director to search for
+            company_number: Optional company number to filter results
+            
+        Returns:
+            Dictionary with director information or None
+        """
+        try:
+            # If company number is provided, get officers for that company
+            if company_number:
+                officers = self.get_company_officers(company_number)
+                if officers and "items" in officers:
+                    # Search for director by name in officers list
+                    director_name_lower = director_name.lower()
+                    for officer in officers["items"]:
+                        officer_name = officer.get("name", "").lower()
+                        if director_name_lower in officer_name or officer_name in director_name_lower:
+                            return {
+                                "name": officer.get("name"),
+                                "officer_role": officer.get("officer_role"),
+                                "appointed_on": officer.get("appointed_on"),
+                                "resigned_on": officer.get("resigned_on"),
+                                "date_of_birth": officer.get("date_of_birth"),
+                                "nationality": officer.get("nationality"),
+                                "occupation": officer.get("occupation"),
+                                "address": officer.get("address"),
+                                "company_number": company_number,
+                                "data": officer
+                            }
+                return None
+            
+            # If no company number, use Companies House search API for officers
+            # Note: Companies House doesn't have a direct officer search API
+            # This would require searching companies first, then checking officers
+            logger.warning("Director search without company number requires company search first")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error searching for director: {e}")
+            return None
+    
+    def verify_director(self, director_name: str, company_number: str, 
+                       date_of_birth: Optional[str] = None) -> Optional[Dict]:
+        """
+        Verify director information against Companies House records
+        
+        Args:
+            director_name: Name of the director
+            company_number: Company number where director should be listed
+            date_of_birth: Optional date of birth for additional verification
+            
+        Returns:
+            Dictionary with verification results or None
+        """
+        try:
+            # Get officers for the company
+            officers = self.get_company_officers(company_number)
+            
+            if not officers or "items" not in officers:
+                logger.warning(f"No officers found for company {company_number}")
+                return {
+                    "verified": False,
+                    "reason": "No officers found for company",
+                    "director_data": None
+                }
+            
+            # Search for director by name
+            director_name_lower = director_name.lower()
+            for officer in officers["items"]:
+                officer_name = officer.get("name", "").lower()
+                
+                # Check if names match (fuzzy matching)
+                if director_name_lower in officer_name or officer_name in director_name_lower:
+                    # Extract director data
+                    director_data = {
+                        "name": officer.get("name"),
+                        "officer_role": officer.get("officer_role"),
+                        "appointed_on": officer.get("appointed_on"),
+                        "resigned_on": officer.get("resigned_on"),
+                        "date_of_birth": officer.get("date_of_birth"),
+                        "nationality": officer.get("nationality"),
+                        "occupation": officer.get("occupation"),
+                        "address": officer.get("address"),
+                        "company_number": company_number
+                    }
+                    
+                    # If DOB provided, verify it matches
+                    dob_match = True
+                    if date_of_birth and officer.get("date_of_birth"):
+                        # Compare dates (format may vary)
+                        officer_dob = str(officer.get("date_of_birth", ""))
+                        if date_of_birth not in officer_dob and officer_dob not in date_of_birth:
+                            dob_match = False
+                            logger.warning(f"Date of birth mismatch: {date_of_birth} vs {officer_dob}")
+                    
+                    return {
+                        "verified": dob_match,
+                        "reason": "Director found and verified" if dob_match else "Director found but DOB mismatch",
+                        "director_data": director_data,
+                        "data": officer
+                    }
+            
+            # Director not found
+            return {
+                "verified": False,
+                "reason": "Director not found in company officers",
+                "director_data": None
+            }
+            
+        except Exception as e:
+            logger.error(f"Error verifying director: {e}")
+            return {
+                "verified": False,
+                "reason": f"Error during verification: {str(e)}",
+                "director_data": None
+            }
+    
+    def get_director_details(self, company_number: str, director_name: str) -> Optional[Dict]:
+        """
+        Get detailed director information from Companies House
+        
+        Args:
+            company_number: Company number
+            director_name: Director name
+            
+        Returns:
+            Dictionary with director details or None
+        """
+        verification_result = self.verify_director(director_name, company_number)
+        
+        if verification_result and verification_result.get("verified"):
+            return verification_result.get("director_data")
+        
+        return None
+
 

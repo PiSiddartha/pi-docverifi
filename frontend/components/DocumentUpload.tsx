@@ -9,10 +9,17 @@ import ProgressBar from './ProgressBar'
 export default function DocumentUpload() {
   const [file, setFile] = useState<File | null>(null)
   const [documentType, setDocumentType] = useState('companies_house')
+  // Company/Registration fields
   const [companyName, setCompanyName] = useState('')
   const [companyNumber, setCompanyNumber] = useState('')
   const [address, setAddress] = useState('')
   const [date, setDate] = useState('')
+  // VAT Registration fields
+  const [vatNumber, setVatNumber] = useState('')
+  const [businessName, setBusinessName] = useState('')
+  // Director Verification fields
+  const [directorName, setDirectorName] = useState('')
+  const [directorDob, setDirectorDob] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<{ success: boolean; message: string; documentId?: string } | null>(null)
   const [processing, setProcessing] = useState(false)
@@ -26,8 +33,22 @@ export default function DocumentUpload() {
     maxFiles: 1,
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
-        setFile(acceptedFiles[0])
+        const file = acceptedFiles[0]
+        setFile(file)
         setUploadResult(null)
+        
+        // Auto-detect document type from filename
+        const filename = file.name.toLowerCase()
+        if (filename.includes('director') || filename.includes('director_verification')) {
+          setDocumentType('director_verification')
+        } else if (filename.includes('vat') || filename.includes('vat_registration')) {
+          setDocumentType('vat_registration')
+        } else if (filename.includes('company_registration') || filename.includes('registration_certificate')) {
+          setDocumentType('company_registration')
+        } else if (filename.includes('companies_house') || filename.includes('company')) {
+          setDocumentType('companies_house')
+        }
+        // Otherwise keep the current selection
       }
     }
   })
@@ -48,7 +69,11 @@ export default function DocumentUpload() {
         companyName || undefined,
         companyNumber || undefined,
         address || undefined,
-        date || undefined
+        date || undefined,
+        vatNumber || undefined,
+        businessName || undefined,
+        directorName || undefined,
+        directorDob || undefined
       )
 
       setUploadResult({
@@ -131,66 +156,172 @@ export default function DocumentUpload() {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-gray-900 bg-white"
           >
             <option value="companies_house">Companies House Document</option>
-            {/* Future document types can be added here */}
-            {/* <option value="id_document">ID Document</option> */}
-            {/* <option value="passport">Passport</option> */}
+            <option value="company_registration">Company Registration Certificate</option>
+            <option value="vat_registration">VAT Registration</option>
+            <option value="director_verification">Director Verification</option>
           </select>
           <p className="text-sm text-gray-500 mt-1">
             Select the type of document you are uploading. This determines which verification pipeline will be used.
+            {file && (
+              <span className="block mt-1 text-blue-600 font-medium">
+                💡 Tip: Document type was auto-detected from filename. Please verify it's correct.
+              </span>
+            )}
           </p>
         </div>
 
-        {/* Optional Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Company Name (Optional)
-            </label>
-            <input
-              type="text"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter company name"
-            />
+        {/* Conditional Fields Based on Document Type */}
+        {(documentType === 'companies_house' || documentType === 'company_registration') && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Name (Optional)
+              </label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter company name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={companyNumber}
+                onChange={(e) => setCompanyNumber(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter company number"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Address (Optional)
+              </label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter address"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date (Optional)
+              </label>
+              <input
+                type="text"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Company Number (Optional)
-            </label>
-            <input
-              type="text"
-              value={companyNumber}
-              onChange={(e) => setCompanyNumber(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter company number"
-            />
+        )}
+
+        {/* VAT Registration Fields */}
+        {documentType === 'vat_registration' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                VAT Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={vatNumber}
+                onChange={(e) => setVatNumber(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="GB123456789 or 123456789"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                UK VAT number (9 digits, with or without GB prefix)
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Business Name (Optional)
+              </label>
+              <input
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter business name"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Business Address (Optional)
+              </label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter business address"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Address (Optional)
-            </label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Enter address"
-            />
+        )}
+
+        {/* Director Verification Fields */}
+        {documentType === 'director_verification' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Director Name (Optional)
+              </label>
+              <input
+                type="text"
+                value={directorName}
+                onChange={(e) => setDirectorName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter director full name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date of Birth (Optional)
+              </label>
+              <input
+                type="text"
+                value={directorDob}
+                onChange={(e) => setDirectorDob(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="YYYY-MM-DD"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Name (Optional)
+              </label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter company name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Company Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={companyNumber}
+                onChange={(e) => setCompanyNumber(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter company number"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Date (Optional)
-            </label>
-            <input
-              type="text"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="YYYY-MM-DD"
-            />
-          </div>
-        </div>
+        )}
 
         {/* Upload Button */}
         <button
@@ -243,6 +374,10 @@ export default function DocumentUpload() {
                 setCompanyNumber('')
                 setAddress('')
                 setDate('')
+                setVatNumber('')
+                setBusinessName('')
+                setDirectorName('')
+                setDirectorDob('')
                 setCurrentDocumentId(null)
                 
                 // Update result message based on final status

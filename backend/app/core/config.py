@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     # Companies House API
     COMPANIES_HOUSE_API_KEY: str = ""
     
+    # HMRC VAT API - OAuth Configuration
+    HMRC_VAT_API_BASE_URL: str = "https://api.service.hmrc.gov.uk"
+    HMRC_CLIENT_ID: str = ""  # OAuth Client ID from HMRC Developer Hub
+    HMRC_CLIENT_SECRET: str = ""  # OAuth Client Secret from HMRC Developer Hub
+    HMRC_SERVER_TOKEN: str = ""  # Alternative: Server token if not using OAuth
+    HMRC_USE_OAUTH: bool = True  # Set to False to use server token instead
+    
     # AWS S3 (optional)
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
@@ -38,8 +45,9 @@ class Settings(BaseSettings):
     SQS_QUEUE_URL: str = ""
     USE_SQS: bool = False  # Set to True to use SQS instead of BackgroundTasks
     
-    # Ollama LLM Configuration
-    OLLAMA_BASE_URL: str = "http://localhost:11434"  # Default Ollama API URL
+    # OpenAI LLM Configuration
+    OPENAI_API_KEY: str = ""  # OpenAI API key for GPT-5 nano
+    OPENAI_MODEL: str = "gpt-5-nano"  # Model name
     
     @field_validator('CORS_ORIGINS', mode='before')
     @classmethod

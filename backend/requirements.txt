@@ -23,5 +23,6 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-dateutil==2.8.2
 pypdf==3.17.0
+openai>=1.0.0
 # hashlib-compat==1.0.1  # Not needed - hashlib is built into Python 3
 

@@ -1,0 +1,55 @@
+{
+  "vat_registration_samples": [
+    {
+      "description": "Standard UK VAT Registration Certificate",
+      "vat_number": "GB123456789",
+      "business_name": "ACME TRADING LIMITED",
+      "business_address": "123 High Street, London, SW1A 1AA",
+      "registration_date": "2020-01-15",
+      "ocr_text_template": "HM REVENUE & CUSTOMS\nVAT REGISTRATION CERTIFICATE\n\nVAT Registration Number: GB123456789\n\nBusiness Name: ACME TRADING LIMITED\n\nRegistered Address:\n123 High Street\nLondon\nSW1A 1AA\n\nDate of Registration: 15 January 2020\n\nThis certificate confirms that the above business is registered for VAT purposes.\n\nCertificate Number: VAT/2020/001234\n\nIssued by HM Revenue & Customs"
+    },
+    {
+      "description": "VAT Registration with Scottish Business",
+      "vat_number": "GB987654321",
+      "business_name": "SCOTTISH ENTERPRISES LTD",
+      "business_address": "456 Princes Street, Edinburgh, EH2 2BB",
+      "registration_date": "2019-06-20",
+      "ocr_text_template": "HM REVENUE & CUSTOMS\nVAT REGISTRATION CERTIFICATE\n\nVAT Number: GB987654321\n\nRegistered Business Name:\nSCOTTISH ENTERPRISES LTD\n\nBusiness Address:\n456 Princes Street\nEdinburgh\nEH2 2BB\nScotland\n\nRegistration Date: 20 June 2019\n\nVAT Registration Certificate\nThis document confirms VAT registration under the Value Added Tax Act 1994.\n\nReference: VAT/2019/005678"
+    },
+    {
+      "description": "VAT Registration - Partnership",
+      "vat_number": "GB555666777",
+      "business_name": "SMITH & JONES PARTNERSHIP",
+      "business_address": "789 Business Park, Manchester, M1 1AA",
+      "registration_date": "2021-03-10",
+      "ocr_text_template": "HMRC VAT REGISTRATION\n\nVAT Registration Number: GB555666777\n\nBusiness Name: SMITH & JONES PARTNERSHIP\n\nTrading Address:\n789 Business Park\nManchester\nM1 1AA\n\nEffective Date of Registration: 10 March 2021\n\nThis certificate is issued in accordance with the Value Added Tax Regulations 1995.\n\nCertificate valid from: 10/03/2021"
+    },
+    {
+      "description": "VAT Registration - Sole Trader",
+      "vat_number": "GB111222333",
+      "business_name": "JOHN SMITH TRADING",
+      "business_address": "12 Market Square, Birmingham, B1 1AA",
+      "registration_date": "2022-08-05",
+      "ocr_text_template": "HM REVENUE & CUSTOMS\nVAT REGISTRATION CERTIFICATE\n\nVAT Registration Number: GB111222333\n\nName: JOHN SMITH TRADING\n\nPrincipal Place of Business:\n12 Market Square\nBirmingham\nB1 1AA\n\nDate Registered: 05 August 2022\n\nThis business is registered for VAT with effect from the date shown above.\n\nVAT Certificate Number: VAT/2022/012345"
+    }
+  ],
+  "test_scenarios": {
+    "valid_vat_number": {
+      "vat_number": "GB123456789",
+      "expected_result": "verified"
+    },
+    "invalid_vat_number": {
+      "vat_number": "GB999999999",
+      "expected_result": "not_found"
+    },
+    "vat_without_gb_prefix": {
+      "vat_number": "123456789",
+      "expected_result": "normalized_to_GB123456789"
+    },
+    "vat_with_spaces": {
+      "vat_number": "GB 123 456 789",
+      "expected_result": "normalized_to_GB123456789"
+    }
+  }
+}
+

@@ -18,37 +18,63 @@ export interface DocumentUploadResponse {
 export interface DocumentData {
   document_id: string
   filename: string
+  document_type?: string
   status: string
   final_score: number | null
   decision: string | null
   created_at: string | null
   processed_at: string | null
-  ocr_data: {
-    company_name: string | null
-    company_number: string | null
-    address: string | null
-    date: string | null
-    confidence: number | null
+  ocr_data?: {
+    // Companies House / Company Registration fields
+    company_name?: string | null
+    company_number?: string | null
+    address?: string | null
+    date?: string | null
+    confidence?: number | null
+    // VAT Registration fields
+    vat_number?: string | null
+    business_name?: string | null
+    registration_date?: string | null
+    // Director Verification fields
+    director_name?: string | null
+    date_of_birth?: string | null
+    company_name?: string | null
+    company_number?: string | null
+    appointment_date?: string | null
   }
-  companies_house_data: {
-    company_name: string | null
-    company_number: string | null
-    address: string | null
-    date: string | null
+  companies_house_data?: {
+    // Companies House / Company Registration fields
+    company_name?: string | null
+    company_number?: string | null
+    address?: string | null
+    date?: string | null
+    // Director Verification fields
+    director_name?: string | null
+    date_of_birth?: string | null
+    address?: string | null
+    appointment_date?: string | null
+    company_name?: string | null
+    company_number?: string | null
   }
-  forensic_analysis: {
-    forensic_score: number | null
-    forensic_penalty: number | null
-    ela_score: number | null
-    jpeg_quality: number | null
-    copy_move_detected: boolean | null
-    details: any
+  hmrc_data?: {
+    vat_number?: string | null
+    business_name?: string | null
+    address?: string | null
+    registration_date?: string | null
   }
-  scores: {
-    ocr_score: number
-    registry_score: number
-    provided_score: number
-    final_score: number
+  forensic_analysis?: {
+    forensic_score?: number | null
+    forensic_penalty?: number | null
+    ela_score?: number | null
+    jpeg_quality?: number | null
+    copy_move_detected?: boolean | null
+    details?: any
+  }
+  scores?: {
+    ocr_score?: number
+    registry_score?: number
+    provided_score?: number
+    final_score?: number
   }
   flags: string[] | null
 }
@@ -68,15 +94,29 @@ export const uploadDocument = async (
   companyName?: string,
   companyNumber?: string,
   address?: string,
-  date?: string
+  date?: string,
+  vatNumber?: string,
+  businessName?: string,
+  directorName?: string,
+  directorDob?: string
 ): Promise<DocumentUploadResponse> => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('document_type', documentType)
+  
+  // Company/Registration fields
   if (companyName) formData.append('company_name', companyName)
   if (companyNumber) formData.append('company_number', companyNumber)
   if (address) formData.append('address', address)
   if (date) formData.append('date', date)
+  
+  // VAT Registration fields
+  if (vatNumber) formData.append('vat_number', vatNumber)
+  if (businessName) formData.append('business_name', businessName)
+  
+  // Director Verification fields
+  if (directorName) formData.append('director_name', directorName)
+  if (directorDob) formData.append('director_dob', directorDob)
 
   const response = await api.post<DocumentUploadResponse>('/documents/upload', formData, {
     headers: {

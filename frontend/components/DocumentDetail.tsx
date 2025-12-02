@@ -64,7 +64,7 @@ export default function DocumentDetail({ document, onBack, onProcess, onReview }
                 {document.decision}
               </span>
             )}
-            {document.final_score !== null && (
+            {document.final_score !== null && document.final_score !== undefined && (
               <span className={`text-2xl font-bold ${getScoreColor(document.final_score)}`}>
                 {document.final_score.toFixed(1)}/100
               </span>
@@ -77,123 +77,270 @@ export default function DocumentDetail({ document, onBack, onProcess, onReview }
           <div className="bg-blue-50 p-4 rounded-lg">
             <p className="text-sm text-gray-600 mb-1">OCR Score</p>
             <p className="text-2xl font-bold text-blue-600">
-              {document.scores.ocr_score.toFixed(1)}/30
+              {(document.scores?.ocr_score ?? 0).toFixed(1)}/{document.document_type === 'director_verification' ? '40' : '30'}
             </p>
           </div>
           <div className="bg-green-50 p-4 rounded-lg">
             <p className="text-sm text-gray-600 mb-1">Registry Score</p>
             <p className="text-2xl font-bold text-green-600">
-              {document.scores.registry_score.toFixed(1)}/40
+              {(document.scores?.registry_score ?? 0).toFixed(1)}/{document.document_type === 'director_verification' ? '30' : '40'}
             </p>
           </div>
           <div className="bg-purple-50 p-4 rounded-lg">
             <p className="text-sm text-gray-600 mb-1">Provided Score</p>
             <p className="text-2xl font-bold text-purple-600">
-              {document.scores.provided_score.toFixed(1)}/30
+              {(document.scores?.provided_score ?? 0).toFixed(1)}/30
             </p>
           </div>
           <div className="bg-red-50 p-4 rounded-lg">
             <p className="text-sm text-gray-600 mb-1">Forensic Penalty</p>
             <p className="text-2xl font-bold text-red-600">
-              -{document.forensic_analysis.forensic_penalty?.toFixed(1) || 0}/15
+              -{((document.forensic_analysis?.forensic_penalty ?? 0) || 0).toFixed(1)}/15
             </p>
           </div>
         </div>
 
-        {/* OCR Data */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 text-gray-900">OCR Extracted Data</h3>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Company Name</p>
-                <p className="font-medium text-gray-900">{document.ocr_data.company_name || <span className="text-gray-500">-</span>}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Company Number</p>
-                <p className="font-medium text-gray-900">{document.ocr_data.company_number || <span className="text-gray-500">-</span>}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Address</p>
-                <p className="font-medium text-gray-900">{document.ocr_data.address || <span className="text-gray-500">-</span>}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Confidence</p>
-                <p className="font-medium text-gray-900">
-                  {document.ocr_data.confidence ? `${document.ocr_data.confidence.toFixed(1)}%` : <span className="text-gray-500">-</span>}
-                </p>
+        {/* OCR Data - Dynamic based on document type */}
+        {document.ocr_data && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 text-gray-900">OCR Extracted Data</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4">
+                {document.document_type === 'vat_registration' ? (
+                  <>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">VAT Number</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.vat_number || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Business Name</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.business_name || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Address</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.address || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Registration Date</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.registration_date || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Confidence</p>
+                      <p className="font-medium text-gray-900">
+                        {document.ocr_data.confidence !== null && document.ocr_data.confidence !== undefined 
+                          ? `${document.ocr_data.confidence.toFixed(1)}%` 
+                          : <span className="text-gray-500">-</span>}
+                      </p>
+                    </div>
+                  </>
+                ) : document.document_type === 'director_verification' ? (
+                  <>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Director Name</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.director_name || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Date of Birth</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.date_of_birth || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Address</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.address || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Company Name</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.company_name || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Company Number</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.company_number || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Appointment Date</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.appointment_date || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Confidence</p>
+                      <p className="font-medium text-gray-900">
+                        {document.ocr_data.confidence !== null && document.ocr_data.confidence !== undefined 
+                          ? `${document.ocr_data.confidence.toFixed(1)}%` 
+                          : <span className="text-gray-500">-</span>}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Company Name</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.company_name || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Company Number</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.company_number || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Address</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.address || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Date</p>
+                      <p className="font-medium text-gray-900">{document.ocr_data.date || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Confidence</p>
+                      <p className="font-medium text-gray-900">
+                        {document.ocr_data.confidence !== null && document.ocr_data.confidence !== undefined 
+                          ? `${document.ocr_data.confidence.toFixed(1)}%` 
+                          : <span className="text-gray-500">-</span>}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Companies House Data */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 text-gray-900">Companies House Data</h3>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Company Name</p>
-                <p className="font-medium text-gray-900">{document.companies_house_data.company_name || <span className="text-gray-500">-</span>}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Company Number</p>
-                <p className="font-medium text-gray-900">{document.companies_house_data.company_number || <span className="text-gray-500">-</span>}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Address</p>
-                <p className="font-medium text-gray-900">{document.companies_house_data.address || <span className="text-gray-500">-</span>}</p>
+        {/* Registry Data - Dynamic based on document type */}
+        {document.document_type === 'vat_registration' && document.hmrc_data && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 text-gray-900">HMRC VAT Data</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">VAT Number</p>
+                  <p className="font-medium text-gray-900">{document.hmrc_data.vat_number || <span className="text-gray-500">-</span>}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Business Name</p>
+                  <p className="font-medium text-gray-900">{document.hmrc_data.business_name || <span className="text-gray-500">-</span>}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Address</p>
+                  <p className="font-medium text-gray-900">{document.hmrc_data.address || <span className="text-gray-500">-</span>}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Registration Date</p>
+                  <p className="font-medium text-gray-900">{document.hmrc_data.registration_date || <span className="text-gray-500">-</span>}</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Companies House Data - For Companies House, Company Registration, and Director Verification */}
+        {document.companies_house_data && document.document_type !== 'vat_registration' && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 text-gray-900">
+              {document.document_type === 'director_verification' ? 'Companies House Director Data' : 'Companies House Data'}
+            </h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4">
+                {document.document_type === 'director_verification' ? (
+                  <>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Director Name</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.director_name || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Date of Birth</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.date_of_birth || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Address</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.address || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Appointment Date</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.appointment_date || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Company Name</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.company_name || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Company Number</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.company_number || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Company Name</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.company_name || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Company Number</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.company_number || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Address</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.address || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Date</p>
+                      <p className="font-medium text-gray-900">{document.companies_house_data.date || <span className="text-gray-500">-</span>}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Forensic Analysis */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 text-gray-900">Forensic Analysis</h3>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Forensic Score</p>
-                <p className="font-medium text-gray-900">
-                  {document.forensic_analysis.forensic_score !== null && document.forensic_analysis.forensic_score !== undefined 
-                    ? document.forensic_analysis.forensic_score.toFixed(1) 
-                    : <span className="text-gray-500">-</span>}
-                </p>
+        {document.forensic_analysis && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3 text-gray-900">Forensic Analysis</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Forensic Score</p>
+                  <p className="font-medium text-gray-900">
+                    {document.forensic_analysis.forensic_score !== null && document.forensic_analysis.forensic_score !== undefined 
+                      ? document.forensic_analysis.forensic_score.toFixed(1) 
+                      : <span className="text-gray-500">-</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">ELA Score</p>
+                  <p className="font-medium text-gray-900">
+                    {document.forensic_analysis.ela_score !== null && document.forensic_analysis.ela_score !== undefined 
+                      ? document.forensic_analysis.ela_score.toFixed(1) 
+                      : <span className="text-gray-500">-</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">JPEG Quality</p>
+                  <p className="font-medium text-gray-900">
+                    {document.forensic_analysis.jpeg_quality !== null && document.forensic_analysis.jpeg_quality !== undefined 
+                      ? document.forensic_analysis.jpeg_quality.toFixed(1) 
+                      : <span className="text-gray-500">-</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Copy-Move Detected</p>
+                  <p className="font-medium text-gray-900">
+                    {document.forensic_analysis.copy_move_detected === true || 
+                     document.forensic_analysis.copy_move_detected === 'True' || 
+                     document.forensic_analysis.copy_move_detected === 'true' 
+                      ? 'Yes' : 'No'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">ELA Score</p>
-                <p className="font-medium text-gray-900">
-                  {document.forensic_analysis.ela_score !== null && document.forensic_analysis.ela_score !== undefined 
-                    ? document.forensic_analysis.ela_score.toFixed(1) 
-                    : <span className="text-gray-500">-</span>}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">JPEG Quality</p>
-                <p className="font-medium text-gray-900">
-                  {document.forensic_analysis.jpeg_quality !== null && document.forensic_analysis.jpeg_quality !== undefined 
-                    ? document.forensic_analysis.jpeg_quality.toFixed(1) 
-                    : <span className="text-gray-500">-</span>}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Copy-Move Detected</p>
-                <p className="font-medium text-gray-900">{document.forensic_analysis.copy_move_detected ? 'Yes' : 'No'}</p>
-              </div>
+              {document.forensic_analysis.details && Array.isArray(document.forensic_analysis.details) && document.forensic_analysis.details.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 mb-2">Details:</p>
+                  <ul className="list-disc list-inside text-sm text-gray-900">
+                    {document.forensic_analysis.details.map((detail: string, idx: number) => (
+                      <li key={idx} className="text-gray-900">{detail}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
-            {document.forensic_analysis.details && document.forensic_analysis.details.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm text-gray-600 mb-2">Details:</p>
-                <ul className="list-disc list-inside text-sm text-gray-900">
-                  {document.forensic_analysis.details.map((detail: string, idx: number) => (
-                    <li key={idx} className="text-gray-900">{detail}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
-        </div>
+        )}
 
         {/* Actions */}
         <div className="border-t pt-6">

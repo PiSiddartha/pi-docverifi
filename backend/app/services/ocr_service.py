@@ -660,7 +660,7 @@ class OCRService:
     @staticmethod
     def extract_fields(text: str) -> Dict[str, Optional[str]]:
         """
-        Extract structured fields from OCR text using LLM (Ollama gemma3:latest)
+        Extract structured fields from OCR text using LLM (OpenAI GPT-5 nano with structured outputs)
         Falls back to regex-based extraction if LLM is unavailable
         Returns: company_name, company_number, address, date
         """
@@ -673,9 +673,11 @@ class OCRService:
         
         # Try LLM extraction first if available
         llm_extraction_successful = False
+        text_length = len(text) if text else 0
+        
         if HAS_LLM_SERVICE and text and text.strip():
             try:
-                logger.info("Using LLM (Ollama gemma3:latest) for field extraction from OCR text")
+                logger.info("✅ Using LLM (OpenAI GPT-5 nano) for field extraction from OCR text")
                 llm_fields = LLMService.extract_company_fields(text)
                 
                 # Check if LLM extraction was successful (at least one field found)
@@ -692,7 +694,12 @@ class OCRService:
         
         # If LLM extraction didn't work or wasn't available, use regex fallback
         if not llm_extraction_successful:
-            logger.info("Using regex-based field extraction")
+            if not HAS_LLM_SERVICE:
+                logger.info("Using regex fallback: LLM Service not available")
+            elif not text or not text.strip():
+                logger.info("Using regex fallback: No text extracted from OCR")
+            else:
+                logger.info("Using regex fallback: LLM extraction returned no fields")
             
             # Extract UK Companies House number
             # Formats:

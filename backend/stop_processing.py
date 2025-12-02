@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.db.database import SessionLocal
-from app.db.models import DocumentVerification
+from app.db.models import Document
 from sqlalchemy import update
 import logging
 
@@ -24,8 +24,8 @@ def stop_all_processing():
     
     try:
         # Find all documents in processing status
-        processing_docs = db.query(DocumentVerification).filter(
-            DocumentVerification.status == "processing"
+        processing_docs = db.query(Document).filter(
+            Document.status == "processing"
         ).all()
         
         if not processing_docs:
@@ -36,8 +36,8 @@ def stop_all_processing():
         
         # Update status to failed
         result = db.execute(
-            update(DocumentVerification)
-            .where(DocumentVerification.status == "processing")
+            update(Document)
+            .where(Document.status == "processing")
             .values(status="failed", decision="FAIL")
         )
         db.commit()
@@ -62,8 +62,8 @@ def stop_specific_document(document_id: str):
     db = SessionLocal()
     
     try:
-        document = db.query(DocumentVerification).filter(
-            DocumentVerification.document_id == document_id
+        document = db.query(Document).filter(
+            Document.document_id == document_id
         ).first()
         
         if not document:
