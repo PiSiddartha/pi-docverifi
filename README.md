@@ -249,6 +249,30 @@ npm run dev
 
 ## Production Deployment
 
+The backend is deployed on AWS using ECS Fargate, ALB, SQS, and Lambda.
+
+### AWS Deployment
+
+For detailed deployment information, see:
+- **[DEPLOYMENT_SUMMARY.md](./DEPLOYMENT_SUMMARY.md)** - Complete deployment reference
+- **[deployment/README.md](./deployment/README.md)** - Deployment scripts and management
+
+**Quick Commands:**
+```bash
+# Rebuild and deploy
+cd deployment
+./rebuild-and-deploy.sh
+
+# Sync environment variables
+./sync-env-to-ecs.sh ../backend/.env
+```
+
+**Production Endpoints:**
+- Health: `http://document-verification-alb-1580232532.ap-south-1.elb.amazonaws.com/health`
+- API Docs: `http://document-verification-alb-1580232532.ap-south-1.elb.amazonaws.com/api/docs`
+
+### Local Production Setup
+
 1. Set `ENVIRONMENT=production` in backend `.env`
 2. Configure proper database and S3 credentials
 3. Build frontend: `npm run build`

@@ -11,7 +11,7 @@ requests==2.31.0
 mangum==0.17.0  # For Lambda adapter
 Pillow>=10.3.0
 pdf2image==1.16.3
-opencv-python==4.9.0.80
+opencv-python-headless==4.9.0.80
 numpy<2.0.0,>=1.26.0
 scikit-image==0.22.0
 exifread==3.0.0
